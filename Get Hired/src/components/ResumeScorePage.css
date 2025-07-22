@@ -1,0 +1,247 @@
+/* --- Resume Scorer Page Styles --- */
+.scorer-page-wrapper {
+    background: var(--background-gradient);
+    min-height: 100vh;
+}
+
+.scorer-container {
+    padding-top: 2rem;
+    padding-bottom: 4rem;
+}
+
+.scorer-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.scorer-header h1 {
+    font-size: 2.75rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.scorer-header p {
+    font-size: 1.125rem;
+    color: var(--text-secondary);
+    max-width: 65ch;
+    margin: 0 auto;
+}
+
+.scorer-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: flex-start;
+}
+
+.input-column, .results-column {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.scorer-card {
+    background: var(--white);
+    padding: 2rem;
+    border-radius: 1rem;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-color);
+    height: 100%;
+}
+
+.upload-box {
+    border: 3px dashed var(--border-color);
+    border-radius: 0.75rem;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    background-color: var(--background-light);
+}
+.upload-box:hover {
+    border-color: var(--primary-accent);
+    background-color: var(--primary-light);
+}
+.upload-box .upload-icon {
+    background: var(--primary-light);
+    color: var(--primary-accent);
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+}
+.upload-box p {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+.upload-box span {
+    font-size: 0.875rem;
+    color: var(--text-light);
+}
+.upload-box input[type="file"] {
+    display: none;
+}
+.file-name {
+    margin-top: 1rem;
+    font-weight: 500;
+    color: var(--success-color);
+}
+
+.resume-content-display {
+    background-color: var(--background-light);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-top: 1.5rem;
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+}
+
+.jd-textarea {
+    width: 100%;
+    min-height: 250px;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-color);
+    padding: 1rem;
+    font-size: 1rem;
+    resize: vertical;
+}
+
+.analyze-button {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 0.5rem;
+    background: var(--primary-accent);
+    color: var(--white);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    box-shadow: var(--shadow-md);
+}
+.analyze-button:hover {
+    background: var(--primary-accent-hover);
+    box-shadow: var(--shadow-lg);
+}
+.analyze-button:disabled {
+    background: var(--text-light);
+    cursor: not-allowed;
+}
+
+.results-placeholder, .loading-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    height: 100%;
+    color: var(--text-light);
+}
+.loading-indicator .spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid var(--primary-light);
+    border-top-color: var(--primary-accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.results-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+.score-gauge-wrapper {
+    text-align: center;
+}
+.score-gauge {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: conic-gradient(var(--success-color) calc(var(--score) * 1%), var(--border-color) 0);
+    margin: 0 auto;
+    position: relative;
+    transition: background 0.5s;
+}
+.score-gauge::before {
+    content: '';
+    position: absolute;
+    height: 85%;
+    width: 85%;
+    background: var(--white);
+    border-radius: 50%;
+}
+.score-text {
+    position: relative;
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--success-color);
+}
+.score-gauge-wrapper h3 {
+    margin-top: 1rem;
+    font-size: 1.25rem;
+    color: var(--text-primary);
+}
+
+.feedback-card {
+    background: var(--background-light);
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    border-left: 5px solid;
+}
+.feedback-card.errors { border-color: var(--danger-color); }
+.feedback-card.improvements { border-color: var(--warning-color); }
+.feedback-card.conclusions { border-color: var(--success-color); }
+
+.feedback-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+.feedback-header h4 {
+    font-size: 1.125rem;
+    color: var(--text-primary);
+    margin: 0;
+}
+.errors .feedback-header .icon { color: var(--danger-color); }
+.improvements .feedback-header .icon { color: var(--warning-color); }
+.conclusions .feedback-header .icon { color: var(--success-color); }
+
+.feedback-card ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.feedback-card li {
+    color: var(--text-secondary);
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .scorer-layout {
+        grid-template-columns: 1fr;
+    }
+}
+@media (max-width: 576px) {
+    .scorer-header h1 { font-size: 2rem; }
+    .scorer-card { padding: 1.5rem; }
+}
