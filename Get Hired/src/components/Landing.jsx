@@ -209,7 +209,7 @@ const Landing = () => {
                     <div className="container">
                         <h2>Ready to Take Control of Your Career?</h2>
                         <p>Join thousands of successful professionals and land your next role with confidence.</p>
-                        <a href="#" className="btn">Sign Up Now</a>
+                        <a href="/login" className="btn">Sign Up Now</a>
                     </div>
                 </section>
             </main>

@@ -1,22 +1,30 @@
 import React, { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom'; // Import NavLink
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'; // import useNavigate for navigation
 import { Edit, Save, X, Plus, Trash2, MapPin, Briefcase, GraduationCap, Lightbulb, User, Phone, Mail, Link as LinkIcon, LogOut, LayoutDashboard, Star, Menu, Linkedin, Award, Twitter, Github } from 'lucide-react';
-import "./Profile.css"; // Assuming Profile.css contains styles for Navbar as well
+import Cookies from 'js-cookie'; // import js-cookie for cookie manipulation
+import "./Profile.css";
 
 const Navbar = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const navigate = useNavigate();    // initialize navigate
 
     const navLinks = [
-        { name: 'Profile', to: '/home', icon: User }, // Link to the /home route, which renders Profile by default
-        { name: 'Resume Score', to: '/home/resume-dashboard', icon: Star }, // Link to the resume dashboard (relative to /home)
-        { name: 'Naukri Jobs', to: '/naukri-jobs', icon: Briefcase },
+        { name: 'Profile', to: '/home', icon: User },
+        { name: 'Resume Score', to: '/home/resume-dashboard', icon: Star },
         { name: 'LinkedIn Jobs', to: '/home/linkedin-jobs', icon: Linkedin },
+        { name: 'Growth Analysis', to :'/home/growthanalysis',icon: LayoutDashboard}
     ];
+
+    // Logout handler
+    const handleLogout = () => {
+        Cookies.remove('token');  // remove token cookie
+        navigate('/');            // redirect to home/login page
+    };
 
     return (
         <header className="navbar-header">
             <div className="container navbar-container">
-                <NavLink to="/" className="logo"> {/* NavLink for logo, if it should also have active state */}
+                <NavLink to="/" className="logo">
                     Get Hired
                 </NavLink>
                 <nav className="desktop-nav">
@@ -27,18 +35,17 @@ const Navbar = () => {
                             className={({ isActive }) =>
                                 isActive ? 'nav-link-active-link' : 'nav-link'
                             }
-                            // Add the 'end' prop specifically for the 'Profile' link
-                            // This ensures it's active ONLY when the path is exactly '/home'
                             end={link.to === '/home'}
                         >
                             <link.icon size={20} />
                             <span>{link.name}</span>
                         </NavLink>
                     ))}
-                    <NavLink to="/logout" className="nav-link logout"> {/* NavLink for logout */}
+                    {/* Replaced NavLink with button for logout */}
+                    <button onClick={handleLogout} className="nav-link logout" type="button" style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, font: 'inherit', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <LogOut size={20} />
                         <span>Logout</span>
-                    </NavLink>
+                    </button>
                 </nav>
                 <button className="mobile-menu-btn" onClick={() => setIsMenuOpen(!isMenuOpen)}>
                     {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -54,17 +61,20 @@ const Navbar = () => {
                             isActive ? 'nav-link active-link' : 'nav-link'
                         }
                         onClick={() => setIsMenuOpen(false)}
-                        // Add the 'end' prop for mobile menu as well
                         end={link.to === '/home'}
                     >
                         <link.icon size={20} />
                         <span>{link.name}</span>
                     </NavLink>
                 ))}
-                <NavLink to="/logout" className="nav-link logout" onClick={() => setIsMenuOpen(false)}>
+                {/* Mobile logout button */}
+                <button onClick={() => {
+                    handleLogout();
+                    setIsMenuOpen(false);
+                }} className="nav-link logout" type="button" style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, font: 'inherit', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <LogOut size={20} />
                     <span>Logout</span>
-                </NavLink>
+                </button>
             </nav>
             <main className="content-area">
                 <Outlet />

@@ -1,5 +1,6 @@
 package com.gethired.Controller;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,12 +18,15 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.gethired.Entities.AwardsandCertification;
 import com.gethired.Entities.Education;
 import com.gethired.Entities.Experience;
 import com.gethired.Entities.LinkedinJobs;
+import com.gethired.Entities.Skills;
 import com.gethired.Entities.User;
 import com.gethired.Services.UserService;
 
@@ -156,4 +160,183 @@ public ResponseEntity<?> getpic(){
        }
 
     }
+    @PostMapping("/addawardsandcert")
+    public ResponseEntity<?> addaward(@RequestPart AwardsandCertification awardsandCertification, @RequestPart MultipartFile pdFile){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        awardsandCertification.setEmail(email);
+        try {
+            userService.addawardandcert(awardsandCertification, pdFile);
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (Exception e) {
+            // TODO: handle exception
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    @GetMapping("/getcert")
+    public ResponseEntity<?> getcert(){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        try {
+          List<AwardsandCertification> certifications =   userService.getcert(email);
+          return new ResponseEntity<>(certifications, HttpStatus.OK);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            // TODO: handle exception
+        }
+    }
+
+    @PostMapping("/addskills")
+    public ResponseEntity<?> addskills(@RequestBody ArrayList<String> skills){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        try {
+            userService.addskills(skills, email);
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (Exception e) {
+            // TODO: handle exception
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/getskills")
+    public ResponseEntity<?> getskills(){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        try {
+            Skills skills = userService.getSkills(email);
+            return new ResponseEntity<>(skills,HttpStatus.OK);
+        } catch (Exception e) {
+            // TODO: handle exception
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    
+    @PostMapping("/getresumescore")
+    public ResponseEntity<?> getana(@RequestPart("pdf") MultipartFile pdf,@RequestPart("jobdesc") String prompt){
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String email = authentication.getName();
+            String response = userService.resumescore(pdf,prompt,email);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (Exception e) {
+    
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            // TODO: handle exception
+        }
+    }
+    
+    @PostMapping("/getgramatical")
+    public ResponseEntity<?> getgram(@RequestPart("pdf") MultipartFile pdf,@RequestPart("jobdesc") String prompt){
+        try {
+            String response = userService.gramaticalerrors(pdf,prompt);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (Exception e) {
+    
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            // TODO: handle exception
+        }
+    }
+    
+    @PostMapping("/getstyling")
+    public ResponseEntity<?> getstyling(@RequestPart("pdf") MultipartFile pdf,@RequestPart("jobdesc") String prompt){
+        try {
+            String response = userService.styling(pdf,prompt);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (Exception e) {
+    
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            // TODO: handle exception
+        }
+    }
+    
+    @PostMapping("/getimprove")
+    public ResponseEntity<?> getimprove(@RequestPart("pdf") MultipartFile pdf,@RequestPart("jobdesc") String prompt){
+        try {
+            String response = userService.improvements(pdf,prompt);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (Exception e) {
+    
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            // TODO: handle exception
+        }
+    }
+    
+    @PostMapping("/getconclusions")
+    public ResponseEntity<?> getrecomen(@RequestPart("pdf") MultipartFile pdf,@RequestPart("jobdesc") String prompt){
+        try {
+            String response = userService.consandrecommendation(pdf,prompt);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (Exception e) {
+    
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            // TODO: handle exception
+        }
+    }
+    
+    @PostMapping("/getstrength")
+    public ResponseEntity<?> getstrength(@RequestPart("pdf") MultipartFile pdf,@RequestPart("jobdesc") String prompt){
+        try {
+            String response = userService.strength(pdf,prompt);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (Exception e) {
+    
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            // TODO: handle exception
+        }
+    }
+    
+    @PostMapping("/applied")
+    public ResponseEntity<?> applieadd(){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        try {
+            userService.appliead(username);
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (Exception e) {
+            // TODO: handle exception
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+     @PostMapping("/interview")
+    public ResponseEntity<?> interviews(){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        try {
+            userService.intervie(username);
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (Exception e) {
+            // TODO: handle exception
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+     @PostMapping("/offers")
+    public ResponseEntity<?> offers(){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        try {
+            userService.offerss(username);
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (Exception e) {
+            // TODO: handle exception
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    
+
+
 }

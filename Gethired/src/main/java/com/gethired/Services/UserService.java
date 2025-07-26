@@ -3,7 +3,10 @@ package com.gethired.Services;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.Month;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import org.openqa.selenium.By;
@@ -19,6 +22,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -27,14 +31,21 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gethired.Controller.publicController;
+import com.gethired.Entities.AwardsandCertification;
 import com.gethired.Entities.Education;
 import com.gethired.Entities.Experience;
 import com.gethired.Entities.LinkedinJobs;
+import com.gethired.Entities.Skills;
 import com.gethired.Entities.User;
+import com.gethired.Repositories.AwardsRepositories;
 import com.gethired.Repositories.EducationRepo;
 import com.gethired.Repositories.ExperienceRepo;
+import com.gethired.Repositories.SkillsRepos;
 import com.gethired.Repositories.UserRepo;
+import com.google.common.io.Files;
 
 import io.jsonwebtoken.security.Jwks.HASH;
 @Service
@@ -54,7 +65,11 @@ public class UserService {
     @Autowired 
     private RedisService redisService;
     @Autowired
+    private SkillsRepos skillsRepos;
+    @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+    private AwardsRepositories awardsRepositories;
     public void signupuser(User user) {
         String html =  "<!DOCTYPE html>" +
         "<html>" +
@@ -195,6 +210,9 @@ public class UserService {
 
     public void updateuserr(User user, String username) {
         User user2 = userRepo.findByUsername(username);
+        if(user2==null){
+            user2 = userRepo.findByEmail(username);
+        }
         if(user.getAddress()!=null){
             user2.setAddress(user.getAddress());
         }
@@ -260,8 +278,7 @@ public List<LinkedinJobs> getlinkjobs(String position) {
     // Build URI with query param
     UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(baseUrl)
             .queryParam("query", query)
-            .queryParam("num_pages",45)
-            .queryParam("country","in");
+            .queryParam("num_pages",45);
 
     URI uri = builder.build().encode().toUri();
 
@@ -316,6 +333,509 @@ public List<LinkedinJobs> getlinkjobs(String position) {
     // TODO: parse JSON response into List<LinkedinJobs> using Jackson or Gson
 
     return hJobs;  // Return actual mapped results here
+}
+
+public void addawardandcert(AwardsandCertification awardsandCertification , MultipartFile pFile) throws IOException{
+ AwardsandCertification awardsandCertification2 = new AwardsandCertification();
+ if(awardsandCertification.getRank()!=null){
+    awardsandCertification2.setRank(awardsandCertification.getRank());
+ }
+ else{
+    awardsandCertification2.setRank("");
+ }
+    awardsandCertification2.setOrganisation(awardsandCertification.getOrganisation());
+    awardsandCertification2.setCourse(awardsandCertification.getCourse());
+ awardsandCertification2.setPdfbyte(pFile.getBytes());
+ awardsandCertification2.setPdfname(pFile.getOriginalFilename());
+ awardsandCertification2.setPdftype(pFile.getContentType());
+ awardsandCertification2.setEmail(awardsandCertification.getEmail());
+ awardsRepositories.save(awardsandCertification2);
+    
+}
+
+public List<AwardsandCertification> getcert(String email) {
+    // TODO Auto-generated method stub
+    List<AwardsandCertification> awardsandCertifications = awardsRepositories.findByemail(email);
+    System.out.println(awardsandCertifications.size());
+   return awardsandCertifications;
+}
+
+
+
+
+public void addskills(ArrayList<String> skills , String email){
+     Skills skills2 = skillsRepos.findByemail(email);
+     
+     if (skills2==null) {
+        Skills skills3 = new Skills();
+        skills3.setSkills(skills);
+        skills3.setEmail(email);
+        skillsRepos.save(skills3);
+        User user = userRepo.findByEmail(email);
+        HashMap<LocalDate , Integer> mont = user.getSkills();
+        mont.put(LocalDate.now(), 1);
+        user.setSkills(mont);
+        userRepo.save(user);
+
+
+        
+        
+     }
+     else{
+     ArrayList<String> ss = skills2.getSkills();
+     User user =userRepo.findByEmail(email);
+     HashMap<LocalDate,Integer> montu = user.getSkills();
+     montu.put(LocalDate.now(), skills2.getSkills().size()+1);
+     user.setSkills(montu);
+     userRepo.save(user);
+     for(int i = 0;i<skills.size();i++){
+        ss.add(skills.get(i));
+     }
+     skills2.setSkills(ss);
+     skills2.setEmail(email);
+     skillsRepos.save(skills2);
+     }
+     
+
+    
+   }
+
+
+
+ 
+  public Skills getSkills(String email){
+    return skillsRepos.findByemail(email);
+   }
+public String resumescore(MultipartFile pdfFile, String prompt, String email) throws IOException {
+    byte[] pdfBytes = pdfFile.getBytes();
+    String base64Pdf = Base64.getEncoder().encodeToString(pdfBytes);
+
+    String jsonPayload = """
+        {
+          "contents": [
+            {
+              "parts": [
+                {
+                  "inline_data": {
+                    "mime_type": "application/pdf",
+                    "data": "%s"
+                  }
+                },
+                {
+                  "text": "Act as a profient ATS and analyse the job description, resume and tell me the resume score and i only want score  not any other unwanted text , just a number"
+                }
+              ]
+            }
+          ]
+        }
+        """.formatted(base64Pdf, escapeJson(prompt));
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+
+    String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + "AIzaSyAQEV5lsMgF7S-5AuHsGK4xowkBaVhvbTY";
+
+    HttpEntity<String> requestEntity = new HttpEntity<>(jsonPayload, headers);
+
+    ResponseEntity<String> response = restTemplate.postForEntity(url, requestEntity, String.class);
+
+    if (!response.getStatusCode().is2xxSuccessful()) {
+        throw new IOException("API call failed with status: " + response.getStatusCode());
+    }
+
+    String responseBody = response.getBody();
+
+    try {
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode root = objectMapper.readTree(responseBody);
+
+        JsonNode candidates = root.path("candidates");
+        if (candidates.isMissingNode() || !candidates.isArray() || candidates.size() == 0) {
+            throw new IOException("No candidates found in response");
+        }
+
+        JsonNode parts = candidates.get(0).path("content").path("parts");
+        if (parts.isMissingNode() || !parts.isArray() || parts.size() == 0) {
+            throw new IOException("No parts found in response");
+        }
+
+        JsonNode textNode = parts.get(0).path("text");
+        String result = textNode.asText().replace("*", "");
+        if (textNode.isMissingNode()) {
+            throw new IOException("Text field not found in response");
+        }
+        System.out.println(result);
+        int scorer = Integer.parseInt(result);
+        User user = userRepo.findByEmail(email);
+        HashMap<Integer,Integer> schh = user.getScores();
+        int totalcc = user.getCount()+1;
+        schh.put(totalcc ,scorer);
+        user.setCount(totalcc+1);
+        userRepo.save(user);
+        return result;
+    } catch (Exception e) {
+        // Optionally log raw responseBody here
+        throw new IOException("Failed to parse response JSON", e);
+    }
+}
+
+public String strength(MultipartFile pdfFile, String prompt) throws IOException {
+    byte[] pdfBytes = pdfFile.getBytes();
+    String base64Pdf = Base64.getEncoder().encodeToString(pdfBytes);
+
+    String jsonPayload = """
+        {
+          "contents": [
+            {
+              "parts": [
+                {
+                  "inline_data": {
+                    "mime_type": "application/pdf",
+                    "data": "%s"
+                  }
+                },
+                {
+                  "text": "Act as a profient ATS and analyse the job description, resume and tell me the strengths in my resume in short as in 3 to 4 lines"
+                }
+              ]
+            }
+          ]
+        }
+        """.formatted(base64Pdf, escapeJson(prompt));
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+
+    String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + "AIzaSyAQEV5lsMgF7S-5AuHsGK4xowkBaVhvbTY";
+
+    HttpEntity<String> requestEntity = new HttpEntity<>(jsonPayload, headers);
+
+    ResponseEntity<String> response = restTemplate.postForEntity(url, requestEntity, String.class);
+
+    if (!response.getStatusCode().is2xxSuccessful()) {
+        throw new IOException("API call failed with status: " + response.getStatusCode());
+    }
+
+    String responseBody = response.getBody();
+
+    try {
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode root = objectMapper.readTree(responseBody);
+
+        JsonNode candidates = root.path("candidates");
+        if (candidates.isMissingNode() || !candidates.isArray() || candidates.size() == 0) {
+            throw new IOException("No candidates found in response");
+        }
+
+        JsonNode parts = candidates.get(0).path("content").path("parts");
+        if (parts.isMissingNode() || !parts.isArray() || parts.size() == 0) {
+            throw new IOException("No parts found in response");
+        }
+
+        JsonNode textNode = parts.get(0).path("text");
+        String result = textNode.asText().replace("*", "");
+        if (textNode.isMissingNode()) {
+            throw new IOException("Text field not found in response");
+        }
+
+        return result;
+    } catch (Exception e) {
+        // Optionally log raw responseBody here
+        throw new IOException("Failed to parse response JSON", e);
+    }
+}
+
+
+public String improvements(MultipartFile pdfFile, String prompt) throws IOException {
+    byte[] pdfBytes = pdfFile.getBytes();
+    String base64Pdf = Base64.getEncoder().encodeToString(pdfBytes);
+
+    String jsonPayload = """
+        {
+          "contents": [
+            {
+              "parts": [
+                {
+                  "inline_data": {
+                    "mime_type": "application/pdf",
+                    "data": "%s"
+                  }
+                },
+                {
+                  "text": "Act as a profient ATS and analyse the job description, resume and tell me the areas of improvement in my resume in short atmost 3 to 4 lines"
+                }
+              ]
+            }
+          ]
+        }
+        """.formatted(base64Pdf, escapeJson(prompt));
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+
+    String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + "AIzaSyAQEV5lsMgF7S-5AuHsGK4xowkBaVhvbTY";
+
+    HttpEntity<String> requestEntity = new HttpEntity<>(jsonPayload, headers);
+
+    ResponseEntity<String> response = restTemplate.postForEntity(url, requestEntity, String.class);
+
+    if (!response.getStatusCode().is2xxSuccessful()) {
+        throw new IOException("API call failed with status: " + response.getStatusCode());
+    }
+
+    String responseBody = response.getBody();
+
+    try {
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode root = objectMapper.readTree(responseBody);
+
+        JsonNode candidates = root.path("candidates");
+        if (candidates.isMissingNode() || !candidates.isArray() || candidates.size() == 0) {
+            throw new IOException("No candidates found in response");
+        }
+
+        JsonNode parts = candidates.get(0).path("content").path("parts");
+        if (parts.isMissingNode() || !parts.isArray() || parts.size() == 0) {
+            throw new IOException("No parts found in response");
+        }
+
+        JsonNode textNode = parts.get(0).path("text");
+        String result = textNode.asText().replace("*", "");
+        if (textNode.isMissingNode()) {
+            throw new IOException("Text field not found in response");
+        }
+
+        return result;
+    } catch (Exception e) {
+        // Optionally log raw responseBody here
+        throw new IOException("Failed to parse response JSON", e);
+    }
+}
+
+public String consandrecommendation(MultipartFile pdfFile, String prompt) throws IOException {
+    byte[] pdfBytes = pdfFile.getBytes();
+    String base64Pdf = Base64.getEncoder().encodeToString(pdfBytes);
+
+    String jsonPayload = """
+        {
+          "contents": [
+            {
+              "parts": [
+                {
+                  "inline_data": {
+                    "mime_type": "application/pdf",
+                    "data": "%s"
+                  }
+                },
+                {
+                  "text": "Act as a profient ATS and analyse the job description, resume and tell me the conclusions and recommendation in my resume in short atmost 3 or 4 lines"
+                }
+              ]
+            }
+          ]
+        }
+        """.formatted(base64Pdf, escapeJson(prompt));
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+
+    String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + "AIzaSyAQEV5lsMgF7S-5AuHsGK4xowkBaVhvbTY";
+
+    HttpEntity<String> requestEntity = new HttpEntity<>(jsonPayload, headers);
+
+    ResponseEntity<String> response = restTemplate.postForEntity(url, requestEntity, String.class);
+
+    if (!response.getStatusCode().is2xxSuccessful()) {
+        throw new IOException("API call failed with status: " + response.getStatusCode());
+    }
+
+    String responseBody = response.getBody();
+
+    try {
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode root = objectMapper.readTree(responseBody);
+
+        JsonNode candidates = root.path("candidates");
+        if (candidates.isMissingNode() || !candidates.isArray() || candidates.size() == 0) {
+            throw new IOException("No candidates found in response");
+        }
+
+        JsonNode parts = candidates.get(0).path("content").path("parts");
+        if (parts.isMissingNode() || !parts.isArray() || parts.size() == 0) {
+            throw new IOException("No parts found in response");
+        }
+
+        JsonNode textNode = parts.get(0).path("text");
+        String result = textNode.asText().replace("*", "");
+        if (textNode.isMissingNode()) {
+            throw new IOException("Text field not found in response");
+        }
+
+        return result;
+    } catch (Exception e) {
+        // Optionally log raw responseBody here
+        throw new IOException("Failed to parse response JSON", e);
+    }
+}
+
+public String styling(MultipartFile pdfFile, String prompt) throws IOException {
+    byte[] pdfBytes = pdfFile.getBytes();
+    String base64Pdf = Base64.getEncoder().encodeToString(pdfBytes);
+
+    String jsonPayload = """
+        {
+          "contents": [
+            {
+              "parts": [
+                {
+                  "inline_data": {
+                    "mime_type": "application/pdf",
+                    "data": "%s"
+                  }
+                },
+                {
+                  "text": "Act as a profient ATS and analyse the job description, resume and tell me the stlying erros and recommendations in short atmost 3 or 4 lines"
+                }
+              ]
+            }
+          ]
+        }
+        """.formatted(base64Pdf, escapeJson(prompt));
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+
+    String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + "AIzaSyAQEV5lsMgF7S-5AuHsGK4xowkBaVhvbTY";
+
+    HttpEntity<String> requestEntity = new HttpEntity<>(jsonPayload, headers);
+
+    ResponseEntity<String> response = restTemplate.postForEntity(url, requestEntity, String.class);
+
+    if (!response.getStatusCode().is2xxSuccessful()) {
+        throw new IOException("API call failed with status: " + response.getStatusCode());
+    }
+
+    String responseBody = response.getBody();
+
+    try {
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode root = objectMapper.readTree(responseBody);
+
+        JsonNode candidates = root.path("candidates");
+        if (candidates.isMissingNode() || !candidates.isArray() || candidates.size() == 0) {
+            throw new IOException("No candidates found in response");
+        }
+
+        JsonNode parts = candidates.get(0).path("content").path("parts");
+        if (parts.isMissingNode() || !parts.isArray() || parts.size() == 0) {
+            throw new IOException("No parts found in response");
+        }
+
+        JsonNode textNode = parts.get(0).path("text");
+        String result = textNode.asText().replace("*", "");
+        if (textNode.isMissingNode()) {
+            throw new IOException("Text field not found in response");
+        }
+
+        return result;
+    } catch (Exception e) {
+        // Optionally log raw responseBody here
+        throw new IOException("Failed to parse response JSON", e);
+    }
+}
+
+public String gramaticalerrors(MultipartFile pdfFile, String prompt) throws IOException {
+    byte[] pdfBytes = pdfFile.getBytes();
+    String base64Pdf = Base64.getEncoder().encodeToString(pdfBytes);
+
+    String jsonPayload = """
+        {
+          "contents": [
+            {
+              "parts": [
+                {
+                  "inline_data": {
+                    "mime_type": "application/pdf",
+                    "data": "%s"
+                  }
+                },
+                {
+                  "text": "Act as a profient ATS and analyse the job description, resume and tell me the gramatical erros and recommendations in short or atmost 3 or 4 lines"
+                }
+              ]
+            }
+          ]
+        }
+        """.formatted(base64Pdf, escapeJson(prompt));
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+
+    String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + "AIzaSyAQEV5lsMgF7S-5AuHsGK4xowkBaVhvbTY";
+
+    HttpEntity<String> requestEntity = new HttpEntity<>(jsonPayload, headers);
+
+    ResponseEntity<String> response = restTemplate.postForEntity(url, requestEntity, String.class);
+
+    if (!response.getStatusCode().is2xxSuccessful()) {
+        throw new IOException("API call failed with status: " + response.getStatusCode());
+    }
+
+    String responseBody = response.getBody();
+
+    try {
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode root = objectMapper.readTree(responseBody);
+
+        JsonNode candidates = root.path("candidates");
+        if (candidates.isMissingNode() || !candidates.isArray() || candidates.size() == 0) {
+            throw new IOException("No candidates found in response");
+        }
+
+        JsonNode parts = candidates.get(0).path("content").path("parts");
+        if (parts.isMissingNode() || !parts.isArray() || parts.size() == 0) {
+            throw new IOException("No parts found in response");
+        }
+
+        JsonNode textNode = parts.get(0).path("text");
+        String result = textNode.asText().replace("*", "");
+        if (textNode.isMissingNode()) {
+            throw new IOException("Text field not found in response");
+        }
+
+        return result;
+    } catch (Exception e) {
+        // Optionally log raw responseBody here
+        throw new IOException("Failed to parse response JSON", e);
+    }
+}
+
+
+private static String escapeJson(String str) {
+    return str.replace("\\", "\\\\")
+              .replace("\"", "\\\"")
+              .replace("\n", "\\n")
+              .replace("\r", "\\r")
+              .replace("*", " ");
+}
+
+
+public void appliead(String email){
+  User user = userRepo.findByEmail(email);
+  user.setAppliead(user.getAppliead()+1);
+  userRepo.save(user);
+}
+public void intervie(String email){
+  User user = userRepo.findByEmail(email);
+  user.setInterviewcalls(user.getInterviewcalls()+1);
+  userRepo.save(user);
+
+}
+public void offerss(String email){
+  User user = userRepo.findByEmail(email);
+  user.setOffers(user.getOffers()+1);
+  userRepo.save(user);
+   
 }
 
 
